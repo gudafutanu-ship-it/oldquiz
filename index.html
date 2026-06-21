@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>古典ひらめき問題</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ひらめき">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --card2: #111827;
+    --text: #f8fafc;
+    --muted: #cbd5e1;
+    --line: rgba(255,255,255,.12);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+    background: radial-gradient(circle at top, #1e3a8a 0, var(--bg) 44%);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  .app {
+    max-width: 760px;
+    margin: auto;
+    padding: max(18px, env(safe-area-inset-top)) 18px 26px;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 13px; }
+  .pill {
+    padding: 8px 10px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.12);
+    color: #e2e8f0;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .card {
+    background: linear-gradient(180deg, rgba(30,41,59,.96), rgba(15,23,42,.96));
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    padding: 22px;
+    box-shadow: 0 18px 44px rgba(0,0,0,.35);
+  }
+  .toprow {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .tag {
+    display: inline-block;
+    background: #334155;
+    color: #dbeafe;
+    padding: 6px 11px;
+    border-radius: 999px;
+    font-size: 13px;
+  }
+  .level { color: #fde68a; font-size: 14px; }
+  .qtitle {
+    font-size: 22px;
+    font-weight: 800;
+    margin-bottom: 14px;
+    line-height: 1.35;
+  }
+  .problem {
+    white-space: pre-line;
+    line-height: 1.85;
+    font-size: 17px;
+    color: #f8fafc;
+  }
+  .buttons { margin-top: 20px; }
+  button {
+    width: 100%;
+    margin-top: 11px;
+    padding: 15px 14px;
+    font-size: 17px;
+    border: 0;
+    border-radius: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  button:active { transform: translateY(1px); opacity: .92; }
+  .hintBtn { background: #facc15; color: #111827; }
+  .answerBtn { background: #38bdf8; color: #082f49; }
+  .nextBtn { background: #22c55e; color: #052e16; }
+  .shuffleBtn { background: #a78bfa; color: #1e1b4b; }
+  .resetBtn { background: #64748b; color: white; }
+  .box {
+    display: none;
+    margin-top: 16px;
+    padding: 16px;
+    border-radius: 15px;
+    line-height: 1.75;
+    white-space: pre-line;
+    border: 1px solid var(--line);
+  }
+  .hint { background: #422006; color: #fde68a; }
+  .answer { background: #052e16; color: #bbf7d0; }
+  .count {
+    margin-top: 15px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .mini {
+    margin-top: 14px;
+    padding: 12px;
+    border-radius: 14px;
+    background: rgba(255,255,255,.07);
+    color: #cbd5e1;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>古典ひらめき問題</h1>
+      <div class="sub">金貨・橋渡り・水の計量など、有名問題を1問ずつ。</div>
+    </div>
+    <div class="pill" id="savedInfo">記録中</div>
+  </header>
+
+  <main class="card">
+    <div class="toprow">
+      <div class="tag" id="tag"></div>
+      <div class="level" id="level"></div>
+    </div>
+    <div class="qtitle" id="title"></div>
+    <div class="problem" id="problem"></div>
+
+    <div class="buttons">
+      <button class="hintBtn" onclick="showHint()">ヒントを見る</button>
+      <div class="box hint" id="hint"></div>
+
+      <button class="answerBtn" onclick="showAnswer()">答えを見る</button>
+      <div class="box answer" id="answer"></div>
+
+      <button class="nextBtn" onclick="nextQuestion()">次の問題</button>
+      <button class="shuffleBtn" onclick="randomQuestion()">ランダム出題</button>
+      <button class="resetBtn" onclick="resetQuestions()">最初から</button>
+    </div>
+
+    <div class="count" id="count"></div>
+    <div class="mini">ホーム画面に追加すると、iPhoneアプリのように開けます。問題はこのHTML内の questions に追加できます。</div>
+  </main>
+</div>
+
+<script>
+const questions = [
+  {
+    tag: "重さの違い", level: "★☆☆",
+    title: "三つの金貨の袋",
+    problem:
+`三つの袋があります。
+
+A、B、Cの袋には、それぞれ金貨がたくさん入っています。
+本物の金貨は1枚10gです。
+しかし、三つの袋のうち一つだけ、偽物の金貨が入っています。
+偽物の金貨は1枚9gです。
+
+秤は一回だけ使えます。
+どの袋が偽物か、どうやって見分けますか？`,
+    hint: `三つの袋から同じ枚数を取る必要はありません。`,
+    answer:
+`Aから1枚、Bから2枚、Cから3枚取って重さを量ります。
+
+全部本物なら、10g × 6枚 = 60g。
+
+結果が59gならAが偽物。
+58gならBが偽物。
+57gならCが偽物。
+
+偽物は1枚につき1g軽いので、何g軽いかで袋が分かります。`
+  },
+  {
+    tag: "橋渡り", level: "★★☆",
+    title: "四人と懐中電灯",
+    problem:
+`四人が夜に橋を渡ります。
+橋は一度に二人までしか渡れません。
+懐中電灯を持っていないと渡れません。
+
+渡る時間は、
+A：1分
+B：2分
+C：5分
+D：10分
+
+二人で渡る時は遅い人の時間がかかります。
+全員が渡る最短時間は何分ですか？`,
+    hint: `一番速い人だけを往復させると、必ずしも最短ではありません。`,
+    answer:
+`最短は17分です。
+
+1. AとBが渡る：2分
+2. Aが戻る：1分
+3. CとDが渡る：10分
+4. Bが戻る：2分
+5. AとBが渡る：2分
+
+合計 2 + 1 + 10 + 2 + 2 = 17分。`
+  },
+  {
+    tag: "水の計量", level: "★★☆",
+    title: "3リットルと5リットルの容器",
+    problem:
+`3リットルの容器と5リットルの容器があります。
+目盛りはありません。
+
+水はいくらでも使えます。
+この二つの容器だけで、4リットルを量るにはどうしますか？`,
+    hint: `5リットル容器に、3リットル容器を使って差を作ります。`,
+    answer:
+`1. 5リットル容器を満杯にする。
+2. それを3リットル容器に移す。
+3. 5リットル容器には2リットル残る。
+4. 3リットル容器を空にする。
+5. 5リットル容器の2リットルを3リットル容器へ移す。
+6. 5リットル容器を満杯にする。
+7. 3リットル容器が満杯になるまで注ぐ。
+
+3リットル容器にはすでに2リットル入っているので、あと1リットルだけ入る。
+よって5リットル容器には4リットル残ります。`
+  },
+  {
+    tag: "論理", level: "★★☆",
+    title: "二つのドア",
+    problem:
+`二つのドアがあります。
+一つは正解のドア、一つは不正解のドアです。
+
+二人の番人がいます。
+一人は必ず本当のことを言います。
+もう一人は必ず嘘をつきます。
+
+どちらが正直者かは分かりません。
+質問は一回だけできます。
+
+正解のドアを選ぶには、何と聞けばよいですか？`,
+    hint: `「相手に聞いたら何と言うか」を聞きます。`,
+    answer:
+`どちらか一人にこう聞きます。
+
+「もう一人の番人に、正解のドアはどちらかと聞いたら、どちらを指しますか？」
+
+その答えで示されたドアとは反対を選びます。
+
+正直者に聞いても、嘘つきの答えを正直に教える。
+嘘つきに聞いても、正直者の答えを嘘にして教える。
+
+どちらに聞いても必ず不正解のドアを示すので、反対が正解です。`
+  },
+  {
+    tag: "発想", level: "★☆☆",
+    title: "ロウソクの問題",
+    problem:
+`ロウソクが10本あります。
+風で2本消えました。
+しばらくして、さらに1本消えました。
+
+最後まで残るロウソクは何本ですか？`,
+    hint: `火がついたままのロウソクは、どうなりますか？`,
+    answer:
+`答えは3本です。
+
+消えた3本は燃え尽きずに残ります。
+火がついたままの7本は、やがて燃え尽きます。`
+  },
+  {
+    tag: "帽子", level: "★★★",
+    title: "三人の帽子",
+    problem:
+`三人が前後一列に並びます。
+後ろの人は前の二人の帽子が見えます。
+真ん中の人は一番前の人の帽子だけ見えます。
+一番前の人は何も見えません。
+
+帽子は黒が3つ、白が2つあります。
+三人に帽子をかぶせ、余った2つは見せません。
+
+後ろの人は「分からない」と言いました。
+真ん中の人も「分からない」と言いました。
+すると一番前の人が、自分の帽子の色を当てました。
+
+一番前の人の帽子は何色ですか？`,
+    hint: `後ろの人が分からなかった、という情報が重要です。`,
+    answer:
+`一番前の人の帽子は黒です。
+
+もし真ん中と一番前が両方白なら、後ろの人は「残りは黒しかない」と分かります。
+でも後ろの人は分からなかった。
+つまり、真ん中と一番前が両方白ではない。
+
+真ん中の人は一番前の帽子を見ています。
+もし一番前が白なら、自分は黒だと分かります。
+でも真ん中の人も分からなかった。
+
+したがって、一番前の帽子は白ではなく黒です。`
+  },
+  {
+    tag: "川渡り", level: "★★☆",
+    title: "狼・ヤギ・キャベツ",
+    problem:
+`男が、狼・ヤギ・キャベツを川の向こう岸へ運びます。
+船には男と、もう一つだけしか乗せられません。
+
+男がいない岸で、
+狼とヤギだけになると狼がヤギを食べます。
+ヤギとキャベツだけになるとヤギがキャベツを食べます。
+
+どう運べば全て無事に渡せますか？`,
+    hint: `ヤギは何度か行ったり来たりします。`,
+    answer:
+`1. ヤギを渡す。
+2. 男だけ戻る。
+3. 狼を渡す。
+4. ヤギを連れて戻る。
+5. キャベツを渡す。
+6. 男だけ戻る。
+7. ヤギを渡す。
+
+これで、どちらの岸でも食べられる組み合わせだけを残さずに済みます。`
+  },
+  {
+    tag: "確率", level: "★★★",
+    title: "二人の子ども",
+    problem:
+`ある家庭には子どもが二人います。
+そのうち少なくとも一人は男の子だと分かっています。
+
+もう一人も男の子である確率は？`,
+    hint: `あり得る組み合わせを全部書き出します。`,
+    answer:
+`答えは 1/3 です。
+
+二人の子どもの組み合わせは、順番を区別すると、
+男男、男女、女男、女女。
+
+少なくとも一人が男の子なので、女女は除外。
+残るのは、男男、男女、女男。
+
+この3通りのうち、二人とも男の子なのは男男だけ。
+したがって 1/3 です。`
+  },
+  {
+    tag: "硬貨", level: "★★☆",
+    title: "12枚の硬貨",
+    problem:
+`12枚の硬貨があります。
+そのうち1枚だけ重さが違います。
+重いのか軽いのかも分かりません。
+
+天秤は3回だけ使えます。
+偽物を見つけることはできますか？`,
+    hint: `これはかなり有名な難問です。まずは「3回で見つけられる」という事実を楽しむ問題です。`,
+    answer:
+`できます。
+
+ただし手順は少し長くなります。
+ポイントは、1回ごとに「右が重い」「左が重い」「釣り合う」の3通りに分かれることです。
+
+3回なら 3 × 3 × 3 = 27通りの結果が得られます。
+12枚のどれかが偽物で、しかも重いか軽いか分からないので、可能性は24通り。
+
+27通りで24通りを区別できるので、理論上は可能です。
+古典問題としては、実際の分け方を表にして解きます。`
+  },
+  {
+    tag: "発想", level: "★☆☆",
+    title: "穴を掘る人",
+    problem:
+`一人で穴を掘ると2時間かかります。
+二人で掘ると1時間かかります。
+
+では、半分の穴を掘るには何時間かかりますか？`,
+    hint: `誰が掘るか、という条件が書かれていません。`,
+    answer:
+`一人なら1時間。
+二人なら30分です。
+
+この問題は、答えを一つに決められない条件不足の問題です。
+「誰が掘るか」が書かれていないので、そこを確認する必要があります。`
+  }
+];
+
+let index = Number(localStorage.getItem("classicPuzzleIndex") || 0);
+if (index < 0 || index >= questions.length) index = 0;
+
+function saveIndex() {
+  localStorage.setItem("classicPuzzleIndex", String(index));
+}
+
+function loadQuestion() {
+  const q = questions[index];
+  document.getElementById("tag").textContent = q.tag;
+  document.getElementById("level").textContent = q.level;
+  document.getElementById("title").textContent = q.title;
+  document.getElementById("problem").textContent = q.problem;
+  document.getElementById("hint").textContent = q.hint;
+  document.getElementById("answer").textContent = q.answer;
+  document.getElementById("hint").style.display = "none";
+  document.getElementById("answer").style.display = "none";
+  document.getElementById("count").textContent = `${index + 1} / ${questions.length}`;
+  document.getElementById("savedInfo").textContent = `前回位置保存`;
+  saveIndex();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function showHint() {
+  document.getElementById("hint").style.display = "block";
+}
+
+function showAnswer() {
+  document.getElementById("answer").style.display = "block";
+}
+
+function nextQuestion() {
+  index++;
+  if (index >= questions.length) index = 0;
+  loadQuestion();
+}
+
+function randomQuestion() {
+  if (questions.length <= 1) return;
+  let next = index;
+  while (next === index) {
+    next = Math.floor(Math.random() * questions.length);
+  }
+  index = next;
+  loadQuestion();
+}
+
+function resetQuestions() {
+  index = 0;
+  loadQuestion();
+}
+
+loadQuestion();
+</script>
+</body>
+</html>
